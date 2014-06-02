@@ -1,6 +1,26 @@
-2.0.0b2
-=======
-In Progress
+2.0.2
+=====
+
+Bug Fixes
+---------
+* Add six to requirements.txt
+* Avoid KeyError during schema refresh when a keyspace is dropped
+  and TokenAwarePolicy is not in use
+* Avoid registering multiple atexit() cleanup functions will the
+  asyncore event loop is restarted multiple times
+
+2.0.1
+=====
+May 28, 2014
+
+Bug Fixes
+---------
+* Fix check for Cluster.is_shutdown in in @run_in_executor
+  decorator
+
+2.0.0
+=====
+May 28, 2014
 
 Features
 --------
@@ -30,6 +50,13 @@ Bug Fixes
 * Avoid submitting tasks to the ThreadPoolExecutor after shutdown. With
   retries enabled, this could cause Cluster.shutdown() to hang under
   some circumstances.
+* Fix unintended rebuild of token replica map when keyspaces are
+  discovered (on startup), added, or updated and TokenAwarePolicy is not
+  in use.
+* Avoid rebuilding token metadata when cluster topology has not
+  actually changed
+* Avoid preparing queries for hosts that should be ignored (such as
+  remote hosts when using the DCAwareRoundRobinPolicy) (PYTHON-75)
 
 Other
 ^^^^^
