@@ -8,6 +8,10 @@ Bug Fixes
   and TokenAwarePolicy is not in use
 * Avoid registering multiple atexit() cleanup functions will the
   asyncore event loop is restarted multiple times
+* Delay initialization of reactors in order to avoid problems
+  with shared state when using multiprocessing (PYTHON-60)
+* Add python-six to debian dependencies, move python-blist to
+  recommends
 
 2.0.1
 =====
