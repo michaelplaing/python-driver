@@ -22,6 +22,7 @@ from threading import Event, Lock, Thread
 import weakref
 
 from six import BytesIO
+from six.moves import xrange
 
 from cassandra import OperationTimedOut
 from cassandra.connection import Connection, ConnectionShutdown, NONBLOCKING
@@ -59,6 +60,7 @@ def _cleanup(loop_weakref):
 class LibevLoop(object):
 
     def __init__(self):
+        self._pid = os.getpid()
         self._loop = libev.Loop()
         self._notifier = libev.Async(self._loop)
         self._notifier.start()
@@ -125,6 +127,15 @@ class LibevLoop(object):
         if not self._thread:
             return
 
+        for conn in self._live_conns | self._new_conns | self._closed_conns:
+            conn.close()
+            if conn._write_watcher:
+                conn._write_watcher.stop()
+                del conn._write_watcher
+            if conn._read_watcher:
+                conn._read_watcher.stop()
+                del conn._read_watcher
+
         log.debug("Waiting for event loop thread to join...")
         self._thread.join(timeout=1.0)
         if self._thread.is_alive():
@@ -133,6 +144,7 @@ class LibevLoop(object):
                 "Please call Cluster.shutdown() to avoid this.")
 
         log.debug("Event loop thread was joined")
+        self._loop = None
 
     def connection_created(self, conn):
         with self._conn_set_lock:
@@ -187,8 +199,12 @@ class LibevLoop(object):
             for conn in to_stop:
                 if conn._write_watcher:
                     conn._write_watcher.stop()
+                    # clear reference cycles from IO callback
+                    del conn._write_watcher
                 if conn._read_watcher:
                     conn._read_watcher.stop()
+                    # clear reference cycles from IO callback
+                    del conn._read_watcher
 
             changed = True
 
@@ -211,6 +227,17 @@ class LibevConnection(Connection):
     def initialize_reactor(cls):
         if not cls._libevloop:
             cls._libevloop = LibevLoop()
+        else:
+            if cls._libevloop._pid != os.getpid():
+                log.debug("Detected fork, clearing and reinitializing reactor state")
+                cls.handle_fork()
+                cls._libevloop = LibevLoop()
+
+    @classmethod
+    def handle_fork(cls):
+        if cls._libevloop:
+            cls._libevloop._cleanup()
+            cls._libevloop = None
 
     @classmethod
     def factory(cls, *args, **kwargs):

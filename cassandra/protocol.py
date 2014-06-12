@@ -230,7 +230,7 @@ class TruncateError(RequestExecutionException):
 
 
 class WriteTimeoutErrorMessage(RequestExecutionException):
-    summary = 'Timeout during write request'
+    summary = "Coordinator node timed out waiting for replica nodes' responses"
     error_code = 0x1100
 
     @staticmethod
@@ -247,7 +247,7 @@ class WriteTimeoutErrorMessage(RequestExecutionException):
 
 
 class ReadTimeoutErrorMessage(RequestExecutionException):
-    summary = 'Timeout during read request'
+    summary = "Coordinator node timed out waiting for replica nodes' responses"
     error_code = 0x1200
 
     @staticmethod
